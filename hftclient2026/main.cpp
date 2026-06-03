@@ -1,9 +1,9 @@
 #include <iostream>
 #include <string>
-#include <thread>
-#include <chrono>
 #include <vector>
-#include <sstream>
+#include <cerrno>
+#include <cctype>
+#include <cstdio>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -29,7 +29,7 @@ private:
         return true;
     }
 
-    bool getChar(char& c) {
+    inline bool getChar(char& c) {
         if (pos_ >= end_) {
             if (!refill()) return false;
         }
@@ -44,7 +44,7 @@ public:
         char c;
         do {
             if (!getChar(c)) return false;
-        } while (isspace((unsigned char)c));
+        } while (c <= ' ');
 
         int sign = 1;
         if (c == '-') {
@@ -53,7 +53,7 @@ public:
         }
 
         int x = 0;
-        while (!isspace((unsigned char)c)) {
+        while (c > ' ') {
             x = x * 10 + (c - '0');
             if (!getChar(c)) break;
         }
@@ -63,9 +63,9 @@ public:
     }
 };
 
-static bool sendAll(int sock, const string& msg) {
-    const char* p = msg.c_str();
-    size_t left = msg.size();
+static bool sendAll(int sock, const char* msg, size_t len) {
+    const char* p = msg;
+    size_t left = len;
 
     while (left > 0) {
         ssize_t n = send(sock, p, left, MSG_NOSIGNAL);
@@ -77,6 +77,10 @@ static bool sendAll(int sock, const string& msg) {
         left -= (size_t)n;
     }
     return true;
+}
+
+static bool sendAll(int sock, const string& msg) {
+    return sendAll(sock, msg.c_str(), msg.size());
 }
 
 static int connectToServer(const string& host, int port) {
@@ -112,43 +116,35 @@ static int connectToServer(const string& host, int port) {
     return sock;
 }
 
-static bool solveOneChallenge(FastSocketInput& in, int& challengeId, int& answer) {
+static bool solveOneChallenge(FastSocketInput& in, vector<int>& colSumA, int& challengeId, int& answer) {
     int N;
     if (!in.readInt(challengeId)) return false;
     if (!in.readInt(N)) return false;
 
-    vector<int> colSumA(N, 0);
-    vector<int> rowSumB(N, 0);
+    colSumA.assign(N, 0);
 
     int x;
 
-    // Read A and compute column sums.
+    // Read A and compute raw column sums. Modulo is delayed to avoid work in the hot loop.
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             if (!in.readInt(x)) return false;
             colSumA[j] += x;
-            if (colSumA[j] >= MOD) colSumA[j] %= MOD;
         }
     }
 
-    // Read B and compute row sums.
+    // Read each B row, then immediately add its contribution to the checksum.
+    int ans = 0;
     for (int i = 0; i < N; ++i) {
         int row = 0;
         for (int j = 0; j < N; ++j) {
             if (!in.readInt(x)) return false;
             row += x;
-            if (row >= MOD) row %= MOD;
         }
-        rowSumB[i] = row;
+        ans = (ans + (int)(((long long)(colSumA[i] % MOD) * (row % MOD)) % MOD)) % MOD;
     }
 
-    long long ans = 0;
-    for (int k = 0; k < N; ++k) {
-        ans += 1LL * colSumA[k] * rowSumB[k];
-        ans %= MOD;
-    }
-
-    answer = (int)ans;
+    answer = ans;
     return true;
 }
 
@@ -175,18 +171,20 @@ int main(int argc, char** argv) {
     cerr << "Connected as " << team << " to " << host << ":" << port << "\n";
 
     FastSocketInput in(sock);
+    vector<int> colSumA;
+    char reply[64];
 
     while (true) {
         int cid = 0;
         int ans = 0;
 
-        if (!solveOneChallenge(in, cid, ans)) {
+        if (!solveOneChallenge(in, colSumA, cid, ans)) {
             cerr << "Server disconnected or incomplete challenge received.\n";
             break;
         }
 
-        string reply = to_string(cid) + " " + to_string(ans) + "\n";
-        if (!sendAll(sock, reply)) {
+        int replyLen = snprintf(reply, sizeof(reply), "%d %d\n", cid, ans);
+        if (replyLen <= 0 || !sendAll(sock, reply, (size_t)replyLen)) {
             cerr << "Failed to send answer.\n";
             break;
         }
