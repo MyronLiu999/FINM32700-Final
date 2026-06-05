@@ -72,6 +72,7 @@ Example:
 Where 42 is the challenge ID and 123 is your computed checksum.
 
 
+
 ## Provided Components
 
 
@@ -295,3 +296,17 @@ engineering constraints. The fastest, most stable clients
 will rise to the top.
 
 Good luck, and may your latency be low.
+
+### -----------------------------------------How to compile and run the program-------------------------------------------------------------
+
+## Compile and Run program (in WSL)
+
+
+- g++ -std=c++17 -O3 -mcpu=native -pthread hftclient2026/main.cpp -o build/bin/hftclient2026
+- g++ -std=c++17 -O3 -pthread tools/client_concurrent.cpp -o build/bin/hftclient_concurrent
+- g++ -std=c++17 -O3 -pthread -Ithird_party hftserver2026/main.cpp -o build/bin/hftserver2026
+- g++ -std=c++17 -O3 -pthread -Ithird_party tools/blast_server.cpp -o build/bin/blast_server
+
+# Run program
+- ./build/bin/hftserver2026
+- ./build/bin/hftclient2026 127.0.0.1 12345

@@ -9,7 +9,7 @@ rm -rf "${BUILD_DIR}"
 
 echo "Configuring..."
 # If older fetched CMakeLists cause policy errors, the -DCMAKE_POLICY_VERSION_MINIMUM fallback helps.
-cmake -S . -B "${BUILD_DIR}" -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake -S . -B "${BUILD_DIR}" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
 
 echo "Building..."
 cmake --build "${BUILD_DIR}" -j$(nproc 2>/dev/null || echo 4)
@@ -22,4 +22,3 @@ chmod +x ./hftserver2026 ./hftclient2026 || true
 echo "Build complete."
 echo "Server: ${BIN_DIR}/hftserver2026 (also copied to ./hftserver2026)"
 echo "Client: ${BIN_DIR}/hftclient2026 (also copied to ./hftclient2026)"
-
