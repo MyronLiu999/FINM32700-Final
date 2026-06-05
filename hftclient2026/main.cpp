@@ -28,7 +28,6 @@ private:
         end_ = (size_t)n;
         return true;
     }
-
     inline bool getChar(char& c) {
         if (pos_ >= end_) {
             if (!refill()) return false;
@@ -36,6 +35,7 @@ private:
         c = buf_[pos_++];
         return true;
     }
+
 
 public:
     explicit FastSocketInput(int sock) : sock_(sock), buf_(BUF_SIZE) {}
@@ -46,11 +46,11 @@ public:
             if (!getChar(c)) return false;
         } while (c <= ' ');
 
-        int sign = 1;
-        if (c == '-') {
-            sign = -1;
-            if (!getChar(c)) return false;
-        }
+        // int sign = 1;
+        // if (c == '-') {
+        //     sign = -1;
+        //     if (!getChar(c)) return false;
+        // }
 
         int x = 0;
         while (c > ' ') {
@@ -58,10 +58,12 @@ public:
             if (!getChar(c)) break;
         }
 
-        out = x * sign;
+        // out = x * sign;
+        out = x;
         return true;
     }
 };
+
 
 static bool sendAll(int sock, const char* msg, size_t len) {
     const char* p = msg;
@@ -141,7 +143,9 @@ static bool solveOneChallenge(FastSocketInput& in, vector<int>& colSumA, int& ch
             if (!in.readInt(x)) return false;
             row += x;
         }
-        ans = (ans + (int)(((long long)(colSumA[i] % MOD) * (row % MOD)) % MOD)) % MOD;
+        // ans = (ans + (int)(((long long)(colSumA[i] % MOD) * (row % MOD)) % MOD)) % MOD;
+        ans += 1LL * (colSumA[i] % MOD) * (row % MOD);
+        ans %= MOD;
     }
 
     answer = ans;
@@ -151,13 +155,22 @@ static bool solveOneChallenge(FastSocketInput& in, vector<int>& colSumA, int& ch
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        cerr << "Usage: " << argv[0] << " <host> <port> \n";
+        cerr << "Usage: " << argv[0] << " <host> <port>< \n";
         return 1;
     }
-
+ 
     string host = argv[1];
     int port = stoi(argv[2]);
     string team = "Team Moxiao Li and Myron liu";
+
+    // if (argc < 4) {
+    //     cout << "Usage: " << argv[0] << " <host> <port> <team_name>\n";
+    //     return 1;
+    // }
+
+    // string host = argv[1];
+    // int port = stoi(argv[2]);
+    // string team = argv[3];
 
     int sock = connectToServer(host, port);
     if (sock < 0) return 1;
@@ -193,3 +206,7 @@ int main(int argc, char** argv) {
     close(sock);
     return 0;
 }
+
+
+
+
